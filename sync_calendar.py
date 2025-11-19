@@ -1,6 +1,5 @@
 import asyncio
 from telethon import TelegramClient
-from telethon.tl.functions.messages import GetScheduledHistoryRequest
 import json
 
 CONFIG_PATH = "/Users/denis/sync-tg-calendar/config.json"
@@ -10,6 +9,11 @@ with open(CONFIG_PATH, "r") as f:
 API_ID = config["API_ID"]
 API_HASH = config["API_HASH"]
 SESSION_NAME = config["SESSION_NAME"]    
+
+def compute_ids_hash(ids: set[int]) -> int:
+    if not ids:
+        return 0  # empty set → hash = 0
+    return hash(frozenset(ids)) & 0xFFFFFFFF  # stable 32-bit integer hash
 
 async def main():
     # We use 'async with' to automatically start and stop the client
@@ -24,28 +28,14 @@ async def main():
             print("Logged in successfully. Please run the script again.")
             return
 
-        # Get the 'Saved Messages' chat (referred to as 'me' or 'self')
-        saved_messages_peer = await client.get_input_entity('me')
-
-        # Call the API method to get scheduled messages
-        result = await client(GetScheduledHistoryRequest(
-            peer=saved_messages_peer,
-            hash=0  # Not used for the first request
-        ))
-
-        # Print the messages
-        if not result.messages:
-            print("No scheduled messages found.")
-            return
-
-        print(f"Found {len(result.messages)} scheduled message(s):")
-        print("-------------------------------------------------")
-        
-        for msg in reversed(result.messages):
-            # 'msg.date' is the UTC datetime when it's scheduled to be sent
+        async for msg in client.iter_messages('me', limit=1000, scheduled=True):
+            found_messages = True
             print(f"Scheduled for: {msg.date.strftime('%Y-%m-%d %H:%M:%S')} UTC")
             print(f"Message: {msg.message}\n")
             print(f"Message id: {msg.id}\n")
+
+        if not found_messages:
+            print("No scheduled messages found.")
 
 if __name__ == "__main__":
     # This runs the 'main' function
