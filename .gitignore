@@ -1,4 +1,21 @@
 # .gitignore
-/config.json
+
+# --- Sensitive / Config Files (Keep Private) ---
+config.json
 /session.session
 *.session
+*.session-journal
+
+# --- Virtual Environment (Do Not Commit) ---
+venv/
+env/
+.env
+
+# --- Python Cache (Generated Automatically) ---
+__pycache__/
+*.pyc
+
+# --- OS & Editor Junk ---
+.DS_Store
+.vscode/
+.idea/
