@@ -1,4 +1,4 @@
-# Sync your scheduled messages to your macOS Calendar
+# Sync your scheduled telegram messages to your macOS Calendar
 
 This script retrieves all your scheduled Telegram messages (from your own chat) and creates or updates events in your macOS Calendar based on those messages.
 
