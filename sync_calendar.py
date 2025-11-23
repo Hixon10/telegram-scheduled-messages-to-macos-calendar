@@ -93,7 +93,7 @@ def add_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     """
     _run_jxa(js_code)
     logging.info(
-        f"Event '{event.title}' with id '{event.id}' added to '{calendar_name}'."
+        f"Event '{event.title}' with id '{event.id}' added to '{calendar_name}' Calendar."
     )
 
 
@@ -148,7 +148,9 @@ def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     """
     try:
         _run_jxa(js_code)
-        logging.info(f"Event '{event.title}' with id '{event.id}' updated.")
+        logging.info(
+            f"Event '{event.title}' with id '{event.id}' updated in '{calendar_name}' Calendar."
+        )
     except Exception as e:
         logging.error(f"Failed to update: {e}")
 
