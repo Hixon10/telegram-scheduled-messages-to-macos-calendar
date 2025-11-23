@@ -3,7 +3,6 @@ from telethon import TelegramClient
 from telethon.tl.functions.messages import GetScheduledHistoryRequest
 import json
 import subprocess
-import json
 import datetime
 import re
 from typing import List, Dict
