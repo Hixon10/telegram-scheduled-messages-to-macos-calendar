@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.denis.calendar-sync</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/denis/sync-tg-calendar/venv/bin/python</string>
+        <string>/Users/denis/sync-tg-calendar/sync_calendar.py</string>
+    </array>
+
+    <key>StartInterval</key>
+    <integer>7200</integer>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/denis/sync-tg-calendar/launchd_error.log</string>
+    <key>StandardOutPath</key>
+    <string>/Users/denis/sync-tg-calendar/launchd_out.log</string>
+</dict>
+</plist>
