@@ -8,16 +8,40 @@ import datetime
 import re
 from typing import List, Dict
 from dataclasses import dataclass
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-CONFIG_PATH = "/Users/denis/sync-tg-calendar/config.json"
+BASE_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = BASE_DIR / "config.json"
+LOG_PATH = BASE_DIR / "sync_log.log"
+
+### Logging configuration (5MB size, keep 2 backups)
+handler = RotatingFileHandler(LOG_PATH, maxBytes=5*1024*1024, backupCount=2)
+
+formatter = logging.Formatter(
+    fmt='[%(asctime)s] - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+handler.setFormatter(formatter)
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+root_logger.addHandler(handler)
+
+logging.getLogger('telethon').setLevel(logging.WARNING)
+logging.getLogger('asyncio').setLevel(logging.WARNING)
+
+### App configuration
 with open(CONFIG_PATH, "r") as f:
     config = json.load(f)
 
 API_ID = config["API_ID"]
 API_HASH = config["API_HASH"]
-SESSION_NAME = config["SESSION_NAME"]  
-CALENDAR_NAME = "Telegram"  
+SESSION_NAME = config["SESSION_NAME"]
+CALENDAR_NAME = config["CALENDAR_NAME"]
 
+### Script code
 def _run_jxa(js_code):
     process = subprocess.Popen(
         ['osascript', '-l', 'JavaScript', '-e', js_code],
@@ -66,7 +90,7 @@ def add_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     "Success";
     """
     _run_jxa(js_code)
-    print(f"Event '{event.title}' with id '{event.id}' added to '{calendar_name}'.")
+    logging.info(f"Event '{event.title}' with id '{event.id}' added to '{calendar_name}'.")
 
 def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     """
@@ -119,9 +143,9 @@ def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     """
     try:
         _run_jxa(js_code)
-        print(f"Event '{event.title}' with id '{event.id}' updated.")
+        logging.info(f"Event '{event.title}' with id '{event.id}' updated.")
     except Exception as e:
-        print(f"Failed to update: {e}")
+        logging.error(f"Failed to update: {e}")
 
 def get_all_calendar_events(calendar_name: str) -> dict[int, CalendarEvent]:
     js_code = f"""
@@ -163,12 +187,17 @@ def get_all_calendar_events(calendar_name: str) -> dict[int, CalendarEvent]:
                 parsed_events[id] = event
         return parsed_events
     except Exception as e:
-        print(f"Error fetching events: {e}")
+        logging.error(f"Error fetching events from macOS calendar '{calendar_name}': {e}")
         return []
 
 def sync_events(telegram_events: List[CalendarEvent], calendar_name: str) -> None:
+    logging.info(f"Sync is starting: got {len(telegram_events)} events from telegram to sync.")
+    
     existing_events = get_all_calendar_events(calendar_name)
-    print(f"[{datetime.datetime.now()}] Calendar '{calendar_name}' contains {len(existing_events)} events before sync.")
+    logging.info(f"Calendar '{calendar_name}' contains {len(existing_events)} events before sync.")
+
+    added = 0
+    updated = 0
 
     for telegram_event in telegram_events:
         existing = existing_events.get(telegram_event.id)
@@ -176,34 +205,43 @@ def sync_events(telegram_events: List[CalendarEvent], calendar_name: str) -> Non
         # Case 1 — Event does not exist in calendar -> ADD
         if existing is None:
             add_calendar_event(telegram_event, calendar_name)
+            added += 1
             continue
 
         # Case 2 — Exists but changed -> UPDATE
         if (telegram_event.title != existing.title or 
             telegram_event.startDate != existing.startDate):
             update_calendar_event(telegram_event, calendar_name)
+            updated += 1
             continue
 
-        print(f"Event '{telegram_event.title}' with id '{telegram_event.id}' not changed.")
+        logging.debug(f"Event '{telegram_event.title}' with id '{telegram_event.id}' not changed.")
+
+    if added == 0 and updated == 0:
+        logging.info("Sync has finished. No new events updated or added.")
+    else:
+        logging.info(f"Sync has finished. Added {added} events, updated {updated} events.")
+    
 
 
 async def main():
+    logging.info("Script started")
     # We use 'async with' to automatically start and stop the client
     async with TelegramClient(SESSION_NAME, API_ID, API_HASH) as client:
         
         # Ensure you are logged in
         if not await client.is_user_authorized():
-            print("Script is not authorized. Please run it manually once to log in.")
-            print("You will be asked for your phone number and a login code.")
+            logging.warning("Script is not authorized. Please run it manually once to log in.")
+            logging.warning("You will be asked for your phone number and a login code.")
             await client.send_code_request(await client.get_input_entity('me'))
             await client.sign_in(await client.get_input_entity('me'), input('Enter code: '))
-            print("Logged in successfully. Please run the script again.")
+            logging.info("Logged in successfully. Please run the script again.")
             return
 
         # Get the 'Saved Messages' chat (referred to as 'me' or 'self')
         saved_messages_peer = await client.get_input_entity('me')
 
-        print(f"[{datetime.datetime.now()}] Started getting messages from telegram.")
+        logging.info("Started getting messages from telegram.")
 
         # Call the API method to get scheduled messages
         result = await client(GetScheduledHistoryRequest(
@@ -213,10 +251,10 @@ async def main():
 
         # Print the messages
         if not result.messages:
-            print("No scheduled messages found.")
+            logging.info("No scheduled messages found in telegram. Nothing to sync.")
             return
 
-        print(f"[{datetime.datetime.now()}] Got {len(result.messages)} scheduled message(s) from telegram.")
+        logging.info(f"Got {len(result.messages)} scheduled message(s) from telegram.")
         
         telegram_events: List[CalendarEvent] = []
 
@@ -232,9 +270,7 @@ async def main():
             )
             telegram_events.append(event)
 
-        print(f"[{datetime.datetime.now()}] Sync is staring.")
         sync_events(telegram_events, CALENDAR_NAME)
-        print(f"[{datetime.datetime.now()}] Sync has finished.")
 
 if __name__ == "__main__":
     # This runs the 'main' function
