@@ -23,7 +23,7 @@ This script retrieves all scheduled Telegram messages (from your personal chat) 
 4. macOS will ask for permission to allow `python` to access the Calendar application. You must grant this permission.    
 5. To stop the periodic process, use:
     ```bash
-    launchctl bootout ~/Library/LaunchAgents/com.denis.calendar-sync.plist
+    launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.denis.calendar-sync.plist
 6. To see the current status of a periodic process, use the following command (If the status is `0`, the script is running. A negative number indicates an error, and you need to check `launchd_error.log` or `sync_log.log` files for details):
    ```bash
    launchctl list | grep com.denis.calendar-sync    
