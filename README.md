@@ -26,4 +26,7 @@ This script retrieves all scheduled Telegram messages (from your personal chat) 
     launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.denis.calendar-sync.plist
 6. To see the current status of a periodic process, use the following command (If the status is `0`, the script is running. A negative number indicates an error, and you need to check `launchd_error.log` or `sync_log.log` files for details):
    ```bash
-   launchctl list | grep com.denis.calendar-sync    
+   launchctl list | grep com.denis.calendar-sync
+7. To run the sync immediately (without waiting periodic execution), execute the following command:
+   ```bash
+   launchctl start com.denis.calendar-sync
