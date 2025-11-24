@@ -93,17 +93,17 @@ def add_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     """
     _run_jxa(js_code)
     logging.info(
-        f"Event '{event.title}' with id '{event.id}' added to '{calendar_name}' Calendar."
+        f"Event with id '{event.id}' added to '{calendar_name}' Calendar. The title is '{event.title}', startDate is '{event.startDate}'."
     )
 
 
-def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
+def update_calendar_event(new_event: CalendarEvent, calendar_name: str) -> None:
     """
     Updates title and time.
     Includes logic to prevent "Start date must be before end date" errors
     by determining the safe order of updates.
     """
-    iso_date = _format_dt_for_js(event.startDate)
+    iso_date = _format_dt_for_js(new_event.startDate)
 
     js_code = f"""
     var app = Application("Calendar");
@@ -112,12 +112,12 @@ def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     if (calendars.length === 0) throw new Error("Calendar '" + calName + "' not found.");
     
     var cal = calendars[0];
-    var targetId = "[ID:" + {json.dumps(event.id)} + "]";
+    var targetId = "[ID:" + {json.dumps(new_event.id)} + "]";
     var events = cal.events.whose({{description: {{_contains: targetId}}}});
     var foundEvents = events();
     
     if (foundEvents.length === 0) {{
-        throw new Error("Event with ID " + {json.dumps(event.id)} + " not found.");
+        throw new Error("Event with ID " + {json.dumps(new_event.id)} + " not found.");
     }}
     
     var evt = foundEvents[0];
@@ -128,7 +128,7 @@ def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     
     var currentStartDate = evt.startDate();
     
-    evt.summary = {json.dumps(event.title)};
+    evt.summary = {json.dumps(new_event.title)};
     
     // SAFETY CHECK: Order of operations matters to prevent invalid states
     if (newStartDate.getTime() > currentStartDate.getTime()) {{
@@ -149,7 +149,7 @@ def update_calendar_event(event: CalendarEvent, calendar_name: str) -> None:
     try:
         _run_jxa(js_code)
         logging.info(
-            f"Event '{event.title}' with id '{event.id}' updated in '{calendar_name}' Calendar."
+            f"Event with id '{new_event.id}' updated in '{calendar_name}' Calendar. The new title is '{new_event.title}', startDate is '{new_event.startDate}'."
         )
     except Exception as e:
         logging.error(f"Failed to update: {e}")
